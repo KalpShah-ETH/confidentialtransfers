@@ -1,129 +1,46 @@
-// This file is auto-generated. Do not edit.
 #pragma once
 
-#include <xrpl/protocol/STTx.h>
-#include <xrpl/protocol/STParsedJSON.h>
-#include <xrpl/protocol/jss.h>
-#include <xrpl/protocol_autogen/TransactionBase.h>
-#include <xrpl/protocol_autogen/TransactionBuilderBase.h>
-#include <xrpl/json/json_value.h>
+#include <xrpl/tx/Transactor.h>
 
-#include <stdexcept>
-#include <optional>
-
-namespace xrpl::transactions {
-
-class ConfidentialMPTMergeInboxBuilder;
+namespace xrpl {
 
 /**
- * @brief Transaction: ConfidentialMPTMergeInbox
+ * @brief Merges the confidential inbox balance into the spending balance.
  *
- * Type: ttCONFIDENTIAL_MPT_MERGE_INBOX (86)
- * Delegable: Delegation::delegable
- * Amendment: featureConfidentialTransfer
- * Privileges: noPriv
+ * In the confidential transfer system, incoming funds are deposited into an
+ * "inbox" balance that the recipient cannot immediately spend. This prevents
+ * front-running attacks where an attacker could invalidate a pending
+ * transaction by sending funds to the sender. This transaction merges the
+ * inbox into the spending balance, making those funds available for spending.
  *
- * Immutable wrapper around STTx providing type-safe field access.
- * Use ConfidentialMPTMergeInboxBuilder to construct new transactions.
+ * @par Cryptographic Operations:
+ * - **Homomorphic Addition**: Adds the encrypted inbox balance to the
+ *   encrypted spending balance using ElGamal homomorphic properties.
+ * - **Zero Encryption**: Resets the inbox to an encryption of zero.
+ *
+ * @note This transaction requires no zero-knowledge proofs because it only
+ *       combines encrypted values that the holder already owns. The
+ *       homomorphic properties of ElGamal encryption ensure correctness.
+ *
+ * @see ConfidentialMPTSend, ConfidentialMPTConvert
  */
-class ConfidentialMPTMergeInbox : public TransactionBase
+class ConfidentialMPTMergeInbox : public Transactor
 {
 public:
-    static constexpr xrpl::TxType txType = ttCONFIDENTIAL_MPT_MERGE_INBOX;
+    static constexpr ConsequencesFactoryType ConsequencesFactory{Normal};
 
-    /**
-     * @brief Construct a ConfidentialMPTMergeInbox transaction wrapper from an existing STTx object.
-     * @throws std::runtime_error if the transaction type doesn't match.
-     */
-    explicit ConfidentialMPTMergeInbox(std::shared_ptr<STTx const> tx)
-        : TransactionBase(std::move(tx))
+    explicit ConfidentialMPTMergeInbox(ApplyContext& ctx) : Transactor(ctx)
     {
-        // Verify transaction type
-        if (tx_->getTxnType() != txType)
-        {
-            throw std::runtime_error("Invalid transaction type for ConfidentialMPTMergeInbox");
-        }
     }
 
-    // Transaction-specific field getters
+    static NotTEC
+    preflight(PreflightContext const& ctx);
 
-    /**
-     * @brief Get sfMPTokenIssuanceID (soeREQUIRED)
-     * @return The field value.
-     */
-    [[nodiscard]]
-    SF_UINT192::type::value_type
-    getMPTokenIssuanceID() const
-    {
-        return this->tx_->at(sfMPTokenIssuanceID);
-    }
+    static TER
+    preclaim(PreclaimContext const& ctx);
+
+    TER
+    doApply() override;
 };
 
-/**
- * @brief Builder for ConfidentialMPTMergeInbox transactions.
- *
- * Provides a fluent interface for constructing transactions with method chaining.
- * Uses Json::Value internally for flexible transaction construction.
- * Inherits common field setters from TransactionBuilderBase.
- */
-class ConfidentialMPTMergeInboxBuilder : public TransactionBuilderBase<ConfidentialMPTMergeInboxBuilder>
-{
-public:
-    /**
-     * @brief Construct a new ConfidentialMPTMergeInboxBuilder with required fields.
-     * @param account The account initiating the transaction.
-     * @param mPTokenIssuanceID The sfMPTokenIssuanceID field value.
-     * @param sequence Optional sequence number for the transaction.
-     * @param fee Optional fee for the transaction.
-     */
-    ConfidentialMPTMergeInboxBuilder(SF_ACCOUNT::type::value_type account,
-                     std::decay_t<typename SF_UINT192::type::value_type> const& mPTokenIssuanceID,                    std::optional<SF_UINT32::type::value_type> sequence = std::nullopt,
-                    std::optional<SF_AMOUNT::type::value_type> fee = std::nullopt
-)
-        : TransactionBuilderBase<ConfidentialMPTMergeInboxBuilder>(ttCONFIDENTIAL_MPT_MERGE_INBOX, account, sequence, fee)
-    {
-        setMPTokenIssuanceID(mPTokenIssuanceID);
-    }
-
-    /**
-     * @brief Construct a ConfidentialMPTMergeInboxBuilder from an existing STTx object.
-     * @param tx The existing transaction to copy from.
-     * @throws std::runtime_error if the transaction type doesn't match.
-     */
-    ConfidentialMPTMergeInboxBuilder(std::shared_ptr<STTx const> tx)
-    {
-        if (tx->getTxnType() != ttCONFIDENTIAL_MPT_MERGE_INBOX)
-        {
-            throw std::runtime_error("Invalid transaction type for ConfidentialMPTMergeInboxBuilder");
-        }
-        object_ = *tx;
-    }
-
-    /** @brief Transaction-specific field setters */
-
-    /**
-     * @brief Set sfMPTokenIssuanceID (soeREQUIRED)
-     * @return Reference to this builder for method chaining.
-     */
-    ConfidentialMPTMergeInboxBuilder&
-    setMPTokenIssuanceID(std::decay_t<typename SF_UINT192::type::value_type> const& value)
-    {
-        object_[sfMPTokenIssuanceID] = value;
-        return *this;
-    }
-
-    /**
-     * @brief Build and return the ConfidentialMPTMergeInbox wrapper.
-     * @param publicKey The public key for signing.
-     * @param secretKey The secret key for signing.
-     * @return The constructed transaction wrapper.
-     */
-    ConfidentialMPTMergeInbox
-    build(PublicKey const& publicKey, SecretKey const& secretKey)
-    {
-        sign(publicKey, secretKey);
-        return ConfidentialMPTMergeInbox{std::make_shared<STTx>(std::move(object_))};
-    }
-};
-
-}  // namespace xrpl::transactions
+}  // namespace xrpl
